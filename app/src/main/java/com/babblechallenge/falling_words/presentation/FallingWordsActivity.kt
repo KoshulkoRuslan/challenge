@@ -12,7 +12,7 @@ import com.babblechallenge.falling_words.di.DaggerFallingWordsComponent
 import io.reactivex.rxjava3.disposables.Disposable
 import javax.inject.Inject
 
-class FallingWorldsActivity : AppCompatActivity() {
+class FallingWordsActivity : AppCompatActivity() {
 
     @Inject
     lateinit var viewModel: FallingWordsViewModel

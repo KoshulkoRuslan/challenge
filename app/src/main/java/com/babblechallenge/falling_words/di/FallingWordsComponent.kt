@@ -1,7 +1,7 @@
 package com.babblechallenge.falling_words.di
 
 import androidx.lifecycle.ViewModelStoreOwner
-import com.babblechallenge.falling_words.presentation.FallingWorldsActivity
+import com.babblechallenge.falling_words.presentation.FallingWordsActivity
 import dagger.BindsInstance
 import dagger.Component
 import javax.inject.Singleton
@@ -13,7 +13,7 @@ import javax.inject.Singleton
 )
 interface FallingWordsComponent {
 
-    fun inject(activity: FallingWorldsActivity)
+    fun inject(activity: FallingWordsActivity)
 
     @Component.Factory
     interface Factory {

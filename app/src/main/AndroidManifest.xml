@@ -15,7 +15,7 @@
         android:name=".app.BabbleApp"
         tools:targetApi="31">
         <activity
-            android:name=".falling_words.presentation.FallingWorldsActivity"
+            android:name=".falling_words.presentation.FallingWordsActivity"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
