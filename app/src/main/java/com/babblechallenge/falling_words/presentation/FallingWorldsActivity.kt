@@ -1,43 +1,62 @@
 package com.babblechallenge.falling_words.presentation
 
-import android.content.res.ColorStateList
-import android.graphics.Color
-import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
-import android.view.View
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.livedata.observeAsState
 import com.babblechallenge.app.findComponentDependencies
-import com.babblechallenge.databinding.ActivityMainBinding
 import com.babblechallenge.falling_words.di.DaggerFallingWordsComponent
 import io.reactivex.rxjava3.disposables.Disposable
 import javax.inject.Inject
 
-class FallingWorldsActivity : AppCompatActivity() {
+class FallingWorldsActivity : ComponentActivity() {
 
     @Inject
     lateinit var viewModel: FallingWordsViewModel
-    lateinit var binding: ActivityMainBinding
     private var eventDisposable: Disposable? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setUpComponent()
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-        binding.positiveButton.setOnClickListener {
-            viewModel.handleAction(PositiveButtonClicked)
+        setContent {
+            FallingWords(viewModel)
         }
-        binding.negativeButton.setOnClickListener {
-            viewModel.handleAction(NegativeButtonClicked)
+        val savedState = savedInstanceState?.parcelable<GameState>(GAME_STATE_KEY)
+        viewModel.handleAction(ScreenCreated(savedState))
+    }
+
+    @Composable
+    fun FallingWords(viewModel: FallingWordsViewModel) {
+        MaterialTheme {
+            val state by viewModel.state.observeAsState(initial = Loading)
+            when (state) {
+                is Loading -> LoadingScreen()
+                is InProgress -> {
+                    val progressState = state as InProgress
+                    InProgressScreen(
+                        progress = progressState.progress,
+                        score = progressState.score,
+                        originalWord = progressState.originalWord,
+                        translatedWord = progressState.translation,
+                        positiveButtonListener = { viewModel.handleAction(PositiveButtonClicked) },
+                        negativeButtonListener = { viewModel.handleAction(NegativeButtonClicked) }
+                    )
+                }
+                is GameFinished -> {
+                    val finishedState = state as GameFinished
+                    FinishScreen(
+                        score = finishedState.score,
+                        newRoundButtonListener = { viewModel.handleAction(NewRoundButtonClicked) }
+                    )
+                }
+                is Error -> ErrorScreen(
+                    retryButtonListener = { viewModel.handleAction(RetryButtonClicked) }
+                )
+            }
         }
-        binding.retryButton.setOnClickListener {
-            viewModel.handleAction(RetryButtonClicked)
-        }
-        binding.newRoundButton.setOnClickListener {
-            viewModel.handleAction(NewRoundButtonClicked)
-        }
-        val state = savedInstanceState?.parcelable<GameState>(GAME_STATE_KEY)
-        viewModel.handleAction(ScreenCreated(state))
     }
 
     private fun setUpComponent() {
@@ -47,34 +66,9 @@ class FallingWorldsActivity : AppCompatActivity() {
         ).inject(this)
     }
 
-    override fun onStart() {
-        super.onStart()
-        viewModel.state.observe(this) { state ->
-            when (state) {
-                is Loading -> {
-                    showLoading()
-                }
-                is InProgress -> {
-                    showControlGroup()
-                    binding.originalWord.text = state.originalWord
-                    binding.translationWord.text = state.translation
-                    binding.score.text = state.score
-                    binding.motionGroup.progress = state.progress
-                }
-                is GameFinished -> {
-                    showScore()
-                    binding.roundScore.text = state.score
-                }
-                is Error -> {
-                    showError()
-                }
-            }
-        }
-    }
-
     override fun onResume() {
         super.onResume()
-        eventDisposable = viewModel.eventsBus.subscribe(::showReaction)
+//        eventDisposable = viewModel.eventsBus.subscribe(::showReaction)
         viewModel.handleAction(OnScreenResumed)
     }
 
@@ -87,48 +81,6 @@ class FallingWorldsActivity : AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
         outState.putParcelable(GAME_STATE_KEY, viewModel.getGameState())
-    }
-
-    private fun showReaction(isRightAnswer: Boolean) {
-        binding.root.apply {
-            val color = if (isRightAnswer) Color.GREEN else Color.RED
-            (background as? RippleDrawable)?.setColor(ColorStateList.valueOf(color))
-            isPressed = true
-            isPressed = false
-            performClick()
-        }
-    }
-
-    private fun showControlGroup() {
-        binding.group.visibility = View.VISIBLE
-        binding.progressCircular.visibility = View.GONE
-        binding.retryButton.visibility = View.GONE
-        binding.roundScore.visibility = View.GONE
-        binding.newRoundButton.visibility = View.GONE
-    }
-
-    private fun showLoading() {
-        binding.group.visibility = View.GONE
-        binding.progressCircular.visibility = View.VISIBLE
-        binding.retryButton.visibility = View.GONE
-        binding.roundScore.visibility = View.GONE
-        binding.newRoundButton.visibility = View.GONE
-    }
-
-    private fun showError() {
-        binding.group.visibility = View.GONE
-        binding.progressCircular.visibility = View.GONE
-        binding.retryButton.visibility = View.VISIBLE
-        binding.roundScore.visibility = View.GONE
-        binding.newRoundButton.visibility = View.GONE
-    }
-
-    private fun showScore() {
-        binding.group.visibility = View.GONE
-        binding.progressCircular.visibility = View.GONE
-        binding.retryButton.visibility = View.GONE
-        binding.roundScore.visibility = View.VISIBLE
-        binding.newRoundButton.visibility = View.VISIBLE
     }
 
     companion object {

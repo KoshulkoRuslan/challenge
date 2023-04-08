@@ -1,0 +1,31 @@
+{
+  ConstraintSets: {
+    start: {
+      original_text: {
+        top: ['parent', 'top', 16],
+        start: ['parent', 'start', 16],
+        end: ['parent', 'end', 16]
+      },
+
+      translated_text: {
+        top: ['original_text', 'top', 32],
+        start: ['parent', 'start', 16],
+        end: ['parent', 'end', 16],
+        alpha: 1.0,
+      }
+    },
+    end: {
+      original_text: {
+        top: ['parent', 'top', 16],
+        start: ['parent', 'start', 16],
+        end: ['parent', 'end', 16]
+      },
+      translated_text: {
+        bottom: ['parent', 'bottom', 16],
+        start: ['parent', 'start', 16],
+        end: ['parent', 'end', 16],
+        alpha: 0.0
+      }
+    }
+  }
+}

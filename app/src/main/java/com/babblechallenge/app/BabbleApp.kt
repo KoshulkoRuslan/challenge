@@ -1,7 +1,7 @@
 package com.babblechallenge.app
 
 import android.app.Application
-import androidx.appcompat.app.AppCompatActivity
+import androidx.activity.ComponentActivity
 
 class BabbleApp : Application() {
 
@@ -15,6 +15,6 @@ class BabbleApp : Application() {
     }
 }
 
-inline fun <reified T> AppCompatActivity.findComponentDependencies(): T {
+inline fun <reified T> ComponentActivity.findComponentDependencies(): T {
     return (this.application as BabbleApp).applicationComponent as T
 }
