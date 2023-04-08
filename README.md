@@ -1,4 +1,3 @@
-### Babble challenge app
 ## Technologies
 - Dependency inhection - **Dagger2**
 - Network - **OkHttp**, **Retrofit**, **Gson**
