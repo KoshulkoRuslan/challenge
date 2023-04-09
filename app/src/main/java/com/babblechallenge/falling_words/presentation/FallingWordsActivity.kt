@@ -1,16 +1,21 @@
 package com.babblechallenge.falling_words.presentation
 
+import android.animation.ValueAnimator
+import android.animation.ValueAnimator.RESTART
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.graphics.drawable.RippleDrawable
 import android.os.Bundle
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.animation.doOnRepeat
 import com.babblechallenge.app.findComponentDependencies
 import com.babblechallenge.databinding.ActivityMainBinding
 import com.babblechallenge.falling_words.di.DaggerFallingWordsComponent
 import io.reactivex.rxjava3.disposables.Disposable
 import javax.inject.Inject
+
+private const val DECISION_TIME = 5_000L
 
 class FallingWordsActivity : AppCompatActivity() {
 
@@ -18,6 +23,20 @@ class FallingWordsActivity : AppCompatActivity() {
     lateinit var viewModel: FallingWordsViewModel
     lateinit var binding: ActivityMainBinding
     private var eventDisposable: Disposable? = null
+
+    private val animator = ValueAnimator.ofFloat(0.0f, 1.0f).apply {
+        duration = DECISION_TIME
+        repeatMode = RESTART
+        repeatCount = ValueAnimator.INFINITE
+        addUpdateListener { animator ->
+            val value = animator.animatedValue as Float
+            binding.motionGroup.progress = value
+        }
+        doOnRepeat {
+            viewModel.handleAction(TimerFinished)
+        }
+    }
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,19 +73,22 @@ class FallingWordsActivity : AppCompatActivity() {
                 is Loading -> {
                     showLoading()
                 }
-                is InProgress -> {
+                is Error -> {
+                    showError()
+                }
+                is TimerInProgress -> {
                     showControlGroup()
                     binding.originalWord.text = state.originalWord
                     binding.translationWord.text = state.translation
                     binding.score.text = state.score
-                    binding.motionGroup.progress = state.progress
+                    animator.cancel()
+                    animator.setCurrentFraction(state.progress)
+                    animator.start()
                 }
                 is GameFinished -> {
                     showScore()
+                    animator.cancel()
                     binding.roundScore.text = state.score
-                }
-                is Error -> {
-                    showError()
                 }
             }
         }
@@ -81,12 +103,16 @@ class FallingWordsActivity : AppCompatActivity() {
     override fun onPause() {
         super.onPause()
         eventDisposable?.dispose()
-        viewModel.handleAction(OnScreenPaused)
+        val progress = animator.animatedValue as Float
+        animator.cancel()
+        viewModel.handleAction(OnScreenPaused(progress))
     }
 
     override fun onSaveInstanceState(outState: Bundle) {
         super.onSaveInstanceState(outState)
-        outState.putParcelable(GAME_STATE_KEY, viewModel.getGameState())
+        val progress = if (animator.isRunning) animator.animatedValue as? Float else null
+        val gameState = viewModel.getGameState().copy(currentProgress = progress)
+        outState.putParcelable(GAME_STATE_KEY, gameState)
     }
 
     private fun showReaction(isRightAnswer: Boolean) {
@@ -100,6 +126,7 @@ class FallingWordsActivity : AppCompatActivity() {
     }
 
     private fun showControlGroup() {
+        binding.originalWord.visibility = View.VISIBLE
         binding.group.visibility = View.VISIBLE
         binding.progressCircular.visibility = View.GONE
         binding.retryButton.visibility = View.GONE
@@ -108,6 +135,7 @@ class FallingWordsActivity : AppCompatActivity() {
     }
 
     private fun showLoading() {
+        binding.originalWord.visibility = View.GONE
         binding.group.visibility = View.GONE
         binding.progressCircular.visibility = View.VISIBLE
         binding.retryButton.visibility = View.GONE
@@ -116,6 +144,7 @@ class FallingWordsActivity : AppCompatActivity() {
     }
 
     private fun showError() {
+        binding.originalWord.visibility = View.GONE
         binding.group.visibility = View.GONE
         binding.progressCircular.visibility = View.GONE
         binding.retryButton.visibility = View.VISIBLE
@@ -124,6 +153,7 @@ class FallingWordsActivity : AppCompatActivity() {
     }
 
     private fun showScore() {
+        binding.originalWord.visibility = View.GONE
         binding.group.visibility = View.GONE
         binding.progressCircular.visibility = View.GONE
         binding.retryButton.visibility = View.GONE

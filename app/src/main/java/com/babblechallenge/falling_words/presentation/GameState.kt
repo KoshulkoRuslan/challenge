@@ -10,5 +10,5 @@ data class GameState(
     val isFinished: Boolean,
     val data: List<RoundWord>?,
     val currentStep: Int,
-    val currentProgress: Float?
+    val currentProgress: Float? = 0.0f
 ): Parcelable

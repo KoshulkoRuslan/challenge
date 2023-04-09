@@ -6,35 +6,35 @@
     android:layout_height="match_parent"
     android:background="?selectableItemBackground">
 
+    <TextView
+        android:id="@+id/original_word"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:textAlignment="center"
+        android:textAppearance="@style/TextAppearance.MaterialComponents.Headline3"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:layout_marginTop="32dp"
+        tools:text="holidays" />
+
     <androidx.constraintlayout.motion.widget.MotionLayout
         android:id="@+id/motion_group"
-        android:layout_width="0dp"
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         app:layoutDescription="@xml/activity_main_scene"
         app:layout_constraintBottom_toTopOf="@+id/positive_button"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:context=".falling_words.presentation.FallingWordsActivity">
+        app:layout_constraintTop_toBottomOf="@id/original_word">
 
         <TextView
-            android:id="@+id/original_word"
+            android:id="@+id/translation_word"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:textAlignment="center"
             android:textAppearance="@style/TextAppearance.MaterialComponents.Headline3"
-            app:layout_constraintTop_toTopOf="parent"
-            tools:layout_editor_absoluteX="117dp"
-            tools:text="holidays" />
-
-        <TextView
-            android:id="@+id/translation_word"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:textAlignment="center"
-            android:textAppearance="@style/TextAppearance.MaterialComponents.Headline3"
             app:layout_constraintTop_toBottomOf="@+id/original_word"
-            tools:layout_editor_absoluteX="85dp"
             tools:text="vacaciones" />
 
     </androidx.constraintlayout.motion.widget.MotionLayout>

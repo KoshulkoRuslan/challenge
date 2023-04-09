@@ -7,15 +7,12 @@ import androidx.lifecycle.ViewModelProvider
 import com.babblechallenge.falling_words.domain.RoundWord
 import com.babblechallenge.falling_words.domain.WordsInteractor
 import io.reactivex.rxjava3.android.schedulers.AndroidSchedulers
-import io.reactivex.rxjava3.core.Observable
 import io.reactivex.rxjava3.disposables.Disposable
 import io.reactivex.rxjava3.schedulers.Schedulers
 import io.reactivex.rxjava3.subjects.PublishSubject
 import io.reactivex.rxjava3.subjects.Subject
-import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
-private const val DECISION_TIME = 15_000L
 
 class FallingWordsViewModel(
     private val interactor: WordsInteractor
@@ -23,15 +20,15 @@ class FallingWordsViewModel(
 
     val state: LiveData<ScreenState>
         get() = _state
-    private val _state: MutableLiveData<ScreenState> = MutableLiveData(Loading)
+    private val _state: MutableLiveData<ScreenState> = MutableLiveData()
     val eventsBus: Subject<Boolean>
         get() = _events
     private val _events = PublishSubject.create<Boolean>()
-    private var timerDisposable: Disposable? = null
     private var loadingDisposable: Disposable? = null
     private var data: List<RoundWord>? = null
     private var currentStep = 0
     private var score = 0
+    private var progress: Float = 0.0f
 
     fun handleAction(action: Action) {
         when (action) {
@@ -48,33 +45,25 @@ class FallingWordsViewModel(
                 handleNegativeButton()
             }
             is OnScreenPaused -> {
-                timerDisposable?.dispose()
+                progress = action.progress
             }
             is OnScreenResumed -> {
-                continueGame()
+                startTimerForCurrentStep(progress)
+            }
+            is TimerFinished -> {
+                onTimeExpired()
             }
             is NewRoundButtonClicked -> {
-                timerDisposable?.dispose()
-                loadingDisposable?.dispose()
+                data = null
                 score = 0
                 currentStep = 0
-                data = null
+                progress = 0.0f
                 loadData()
             }
         }
     }
 
-    private fun continueGame() {
-        val data = this.data ?: return
-        if (timerDisposable?.isDisposed == false) return
-        val isGameFinished = _state.value is GameFinished
-        if (isGameFinished) return
-        val lastProgress = (_state.value as? InProgress)?.progress
-        startWithTimer(currentStep, data, score, lastProgress)
-    }
-
     private fun handlePositiveButtonAction() {
-        timerDisposable?.dispose()
         val data = data ?: return
         val isRightAnswer = data[currentStep].isCorrect
         _events.onNext(isRightAnswer)
@@ -83,7 +72,6 @@ class FallingWordsViewModel(
     }
 
     private fun handleNegativeButton() {
-        timerDisposable?.dispose()
         val data = data ?: return
         val isRightAnswer = !data[currentStep].isCorrect
         _events.onNext(isRightAnswer)
@@ -92,16 +80,14 @@ class FallingWordsViewModel(
     }
 
     private fun onTimeExpired() {
-        timerDisposable?.dispose()
         _events.onNext(false)
         tryToStartNextStep()
     }
 
     private fun tryToStartNextStep() {
-        val data = this.data ?: return
         if (hasNextStep()) {
             moveToNextStep()
-            startWithTimer(currentStep, data, score)
+            startTimerForCurrentStep()
         } else {
             val finishedState = GameFinished("Score: $score")
             _state.postValue(finishedState)
@@ -121,6 +107,13 @@ class FallingWordsViewModel(
             .subscribe(::onDataLoaded, ::onError)
     }
 
+    private fun onError(throwable: Throwable) = _state.postValue(Error)
+
+    private fun onDataLoaded(data: List<RoundWord>) {
+        this.data = data
+        startTimerForCurrentStep()
+    }
+
     private fun handleSavedState(state: GameState?) {
         when {
             state == null -> loadData()
@@ -130,53 +123,20 @@ class FallingWordsViewModel(
                 this.data = state.data
                 this.score = state.score
                 this.currentStep = state.currentStep
-                startWithTimer(state.currentStep, state.data, state.score, state.currentProgress)
+                startTimerForCurrentStep(state.currentProgress)
             }
         }
     }
 
-    private fun onDataLoaded(data: List<RoundWord>) {
-        this.data = data
-        startWithTimer(currentStep, data, score)
-    }
-
-    private fun onError(throwable: Throwable) = _state.postValue(Error)
-
-    private fun startWithTimer(
-        roundCount: Int,
-        data: List<RoundWord>,
-        score: Int,
-        progress: Float? = null
-    ) {
-        val wordForStep = data[roundCount]
-        val initialProgressState = InProgress(
-            originalWord = wordForStep.original,
-            translation = wordForStep.translation,
-            isCorrect = wordForStep.isCorrect,
-            progress = progress ?: 62L.toProgress(),
+    private fun startTimerForCurrentStep(progress: Float? = null) {
+        val data = this.data ?: return
+        val stepWord = data[currentStep]
+        _state.value = TimerInProgress(
+            originalWord = stepWord.original,
+            translation = stepWord.translation,
+            progress = progress ?: 0.0f,
             score = "Score: $score"
         )
-        _state.value = initialProgressState
-        timerDisposable = Observable.interval(16, TimeUnit.MILLISECONDS)
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe {
-                val lastState = (_state.value as? InProgress) ?: return@subscribe
-                val currentTime = lastState.progress.toTime()
-                if (currentTime >= DECISION_TIME) {
-                    onTimeExpired()
-                } else {
-                    val updatedTime = currentTime + 62
-                    val updatedProgress = updatedTime.toProgress()
-                    val updatedState = InProgress(
-                        originalWord = wordForStep.original,
-                        translation = wordForStep.translation,
-                        isCorrect = wordForStep.isCorrect,
-                        progress = updatedProgress,
-                        score = "Score: $score"
-                    )
-                    _state.postValue(updatedState)
-                }
-            }
     }
 
     private fun increaseScore() {
@@ -190,28 +150,14 @@ class FallingWordsViewModel(
     fun getGameState(): GameState {
         val state = _state.value
         val data = this.data
-        val progress = (state as? InProgress)?.progress
         val isFinished = state is GameFinished
         return GameState(
             score,
             isFinished = isFinished,
             data,
-            currentStep,
-            progress
+            currentStep
         )
     }
-
-
-    private fun Float.toTime(): Long {
-        if (this >= 1.0f) return DECISION_TIME
-        if (this <= 0.0f) return 0L
-        return (this * DECISION_TIME).toLong()
-    }
-
-    private fun Long.toProgress(): Float {
-        return (this.toFloat() / DECISION_TIME.toFloat())
-    }
-
 }
 
 class FallingWordsViewModelFactory @Inject constructor(
