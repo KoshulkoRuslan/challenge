@@ -99,6 +99,14 @@ class FallingWordsViewModel(
         return (currentStep < dataSize - 1)
     }
 
+    private fun increaseScore() {
+        score += 1
+    }
+
+    private fun moveToNextStep() {
+        currentStep += 1
+    }
+
     private fun loadData() {
         loadingDisposable = interactor.getRoundData()
             .subscribeOn(Schedulers.io())
@@ -114,6 +122,30 @@ class FallingWordsViewModel(
         startTimerForCurrentStep()
     }
 
+    private fun startTimerForCurrentStep(progress: Float? = null) {
+        val data = this.data ?: return
+        val stepWord = data[currentStep]
+        _state.value = TimerInProgress(
+            originalWord = stepWord.original,
+            translation = stepWord.translation,
+            progress = progress ?: 0.0f,
+            score = "Score: $score"
+        )
+    }
+
+
+    fun getGameState(): GameState {
+        val state = _state.value
+        val data = this.data
+        val isFinished = state is GameFinished
+        return GameState(
+            score,
+            isFinished = isFinished,
+            data,
+            currentStep
+        )
+    }
+
     private fun handleSavedState(state: GameState?) {
         when {
             state == null -> loadData()
@@ -126,37 +158,6 @@ class FallingWordsViewModel(
                 startTimerForCurrentStep(state.currentProgress)
             }
         }
-    }
-
-    private fun startTimerForCurrentStep(progress: Float? = null) {
-        val data = this.data ?: return
-        val stepWord = data[currentStep]
-        _state.value = TimerInProgress(
-            originalWord = stepWord.original,
-            translation = stepWord.translation,
-            progress = progress ?: 0.0f,
-            score = "Score: $score"
-        )
-    }
-
-    private fun increaseScore() {
-        score += 1
-    }
-
-    private fun moveToNextStep() {
-        currentStep += 1
-    }
-
-    fun getGameState(): GameState {
-        val state = _state.value
-        val data = this.data
-        val isFinished = state is GameFinished
-        return GameState(
-            score,
-            isFinished = isFinished,
-            data,
-            currentStep
-        )
     }
 }
 

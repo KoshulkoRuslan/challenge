@@ -29,8 +29,9 @@ class WordsInteractorImpl @Inject constructor(
      */
     private fun createRoundData(dictionary: List<Word>, count: Int): List<RoundWord> {
         val resultRoundData = mutableListOf<RoundWord>()
+        val maxCount = if (count > dictionary.size) dictionary.size else count
 
-        for (i in 0..count) {
+        for (i in 0..maxCount - 1) {
             val addCorrectWord = Random.Default.nextBoolean()
             if (addCorrectWord) {
                 val randomWordIndex = Random.Default.nextInt(until = dictionary.size)

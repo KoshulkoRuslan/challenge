@@ -61,4 +61,10 @@ dependencies {
 
     //Matherial design
     implementation 'com.google.android.material:material:1.8.0'
+
+    //testing
+    testImplementation "junit:junit:4.13.2"
+    testImplementation "org.mockito:mockito-core:5.2.0"
+    testImplementation "org.mockito.kotlin:mockito-kotlin:4.1.0"
+    testImplementation "io.mockk:mockk:1.13.4"
 }
